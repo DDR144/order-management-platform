@@ -127,11 +127,26 @@ Códigos: `UNAUTHORIZED`, `STOCK_INSUFFICIENT`, `INVALID_TRANSITION`,
 - Se propaga a Order e Inventory Service y se incluye en cada línea de log (Logback, MDC) y en las respuestas de error.
 - La cabecera se devuelve en la respuesta para correlacionar.
 
+## Diagramas
+
+Cuatro diagramas interactivos documentan el sistema. Cada uno es un HTML
+autocontenido: descárgalo y ábrelo en el navegador para explorar los nodos, las
+rutas y el detalle de cada elemento.
+
+| Diagrama | Qué muestra | Archivo |
+|---|---|---|
+| Arquitectura | Vista de runtime: cliente, API Gateway, microservicios, Keycloak y las dos bases PostgreSQL, con la red interna de Docker Compose como límite. | [`docs/diagrams/architecture.html`](docs/diagrams/architecture.html) |
+| Secuencia de creación | `POST /api/v1/orders`: pedido en PENDING, descuento atómico de stock, confirmación o `409 STOCK_INSUFFICIENT`. | [`docs/diagrams/create-order.sequence.html`](docs/diagrams/create-order.sequence.html) |
+| Modelo de datos | Tablas, columnas y claves de `order_db` (`orders`, `order_history`) e `inventory_db` (`products`). | [`docs/diagrams/data-model.erd.html`](docs/diagrams/data-model.erd.html) |
+| Ciclo de vida | Estados `PENDING`, `CONFIRMED` y `CANCELLED`, sus transiciones válidas y las salidas de error. | [`docs/diagrams/order-lifecycle.lifecycle.html`](docs/diagrams/order-lifecycle.lifecycle.html) |
+
+Las fuentes tipadas están en `docs/diagrams/src/`. El detalle de cada vista y el
+comando para regenerarlas están en [`docs/diagrams/README.md`](docs/diagrams/README.md).
+
 ## Documentación y pruebas
 
 - OpenAPI generado (Swagger UI) en cada microservicio y spec estático en `docs/openapi.yaml`.
 - Colección Postman en `postman/OMP.postman_collection.json`.
-- Diagramas interactivos del sistema en `docs/diagrams/README.md`.
 
 ### Pruebas unitarias (JUnit 5 + Mockito + StepVerifier)
 
