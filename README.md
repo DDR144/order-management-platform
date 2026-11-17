@@ -1,7 +1,7 @@
 # Order Management Platform (OMP)
 
-Reto técnico backend: plataforma de pedidos con arquitectura de microservicios,
-expuesta a través de un API Gateway con autenticación OAuth 2.0/OIDC.
+Plataforma de pedidos con arquitectura de microservicios, expuesta a través de un
+API Gateway con autenticación OAuth 2.0/OIDC.
 
 ## Arquitectura
 
