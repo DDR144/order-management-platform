@@ -1,0 +1,204 @@
+{
+  "schema_version": 1,
+  "diagram_type": "erd",
+  "meta": {
+    "title": "Modelo de datos: order_db e inventory_db",
+    "output": "docs/diagrams/data-model.erd.html",
+    "locale": "es",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/DDR144/order-management-platform.git",
+      "provider": "github",
+      "link_mode": "web",
+      "revision": "c8e3215facdd0e4f0c3ac69919988d5ba83b301a"
+    }
+  },
+  "entities": [
+    {
+      "id": "orders",
+      "label": "orders",
+      "sublabel": "order_db",
+      "tag": "Pedidos",
+      "row": 0,
+      "col": 0,
+      "sources": [
+        {
+          "path": "order-service/src/main/resources/schema.sql",
+          "line": 1,
+          "end_line": 10
+        }
+      ],
+      "attributes": [
+        {
+          "name": "order_id",
+          "type": "UUID NOT NULL",
+          "key": "pk"
+        },
+        {
+          "name": "user_id",
+          "type": "VARCHAR(255) NOT NULL"
+        },
+        {
+          "name": "product_id",
+          "type": "UUID NOT NULL"
+        },
+        {
+          "name": "quantity",
+          "type": "INT NOT NULL"
+        },
+        {
+          "name": "status",
+          "type": "VARCHAR(50) NOT NULL"
+        },
+        {
+          "name": "trace_id",
+          "type": "VARCHAR(255) NOT NULL"
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP NOT NULL"
+        },
+        {
+          "name": "updated_at",
+          "type": "TIMESTAMP"
+        }
+      ],
+      "width": 252
+    },
+    {
+      "id": "order_history",
+      "label": "order_history",
+      "sublabel": "order_db",
+      "tag": "Pedidos",
+      "row": 1,
+      "col": 0,
+      "sources": [
+        {
+          "path": "order-service/src/main/resources/schema.sql",
+          "line": 12,
+          "end_line": 19
+        }
+      ],
+      "attributes": [
+        {
+          "name": "history_id",
+          "type": "UUID NOT NULL",
+          "key": "pk"
+        },
+        {
+          "name": "order_id",
+          "type": "UUID NOT NULL",
+          "key": "fk",
+          "references": "orders.order_id"
+        },
+        {
+          "name": "from_status",
+          "type": "VARCHAR(50)"
+        },
+        {
+          "name": "to_status",
+          "type": "VARCHAR(50) NOT NULL"
+        },
+        {
+          "name": "changed_at",
+          "type": "TIMESTAMP NOT NULL"
+        },
+        {
+          "name": "trace_id",
+          "type": "VARCHAR(255) NOT NULL"
+        }
+      ],
+      "width": 252
+    },
+    {
+      "id": "products",
+      "label": "products",
+      "sublabel": "inventory_db",
+      "tag": "Inventario",
+      "row": 0,
+      "col": 1,
+      "sources": [
+        {
+          "path": "inventory-service/src/main/resources/schema.sql",
+          "line": 1,
+          "end_line": 7
+        }
+      ],
+      "attributes": [
+        {
+          "name": "product_id",
+          "type": "UUID NOT NULL",
+          "key": "pk"
+        },
+        {
+          "name": "name",
+          "type": "VARCHAR(255) NOT NULL"
+        },
+        {
+          "name": "description",
+          "type": "VARCHAR(1000)"
+        },
+        {
+          "name": "stock",
+          "type": "INT NOT NULL"
+        },
+        {
+          "name": "updated_at",
+          "type": "TIMESTAMP"
+        }
+      ],
+      "width": 252
+    }
+  ],
+  "relationships": [
+    {
+      "id": "orders-history",
+      "from": "orders",
+      "to": "order_history",
+      "label": "una fila por transición",
+      "fromCardinality": "one",
+      "toCardinality": "many",
+      "identifying": false,
+      "variant": "dashed"
+    },
+    {
+      "id": "orders-products",
+      "from": "orders",
+      "to": "products",
+      "label": "product_id (otra base)",
+      "fromCardinality": "many",
+      "toCardinality": "one",
+      "identifying": false,
+      "variant": "dashed"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Pedidos",
+      "items": [
+        "orders guarda un solo producto por pedido: no hay tabla de líneas",
+        "status se persiste como STRING del enum PENDING, CONFIRMED o CANCELLED",
+        "order_history registra cada transición con su from_status, to_status y trace_id"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Inventario",
+      "items": [
+        "products es la única tabla de inventory_db",
+        "El stock solo cambia con el UPDATE atómico y condicional del Inventory Service",
+        "Los datos semilla se insertan de forma idempotente al arrancar"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Integridad",
+      "items": [
+        "El esquema no declara FOREIGN KEY: la integridad la sostiene la aplicación",
+        "order_history.order_id referencia orders.order_id sin restricción física",
+        "orders.product_id apunta a otra base, así que no puede ser una FK real"
+      ]
+    }
+  ]
+}

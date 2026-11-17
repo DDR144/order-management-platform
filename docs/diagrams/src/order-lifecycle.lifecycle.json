@@ -1,0 +1,105 @@
+{
+  "schema_version": 3,
+  "diagram_type": "lifecycle",
+  "meta": {
+    "title": "Ciclo de vida del pedido",
+    "output": "docs/diagrams/order-lifecycle.lifecycle.html",
+    "locale": "es",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/DDR144/order-management-platform.git",
+      "provider": "github",
+      "link_mode": "web",
+      "revision": "c8e3215facdd0e4f0c3ac69919988d5ba83b301a"
+    }
+  },
+  "mainPath": ["pending", "confirmed", "cancelled"],
+  "states": [
+    {
+      "id": "pending",
+      "type": "start",
+      "label": "PENDING",
+      "sublabel": "pedido creado, stock sin confirmar",
+      "tag": "inicial",
+      "step": "01",
+      "sources": [
+        { "path": "order-service/src/main/java/com/example/order_service/entity/OrderStatus.java", "line": 11, "end_line": 14, "label": "enum" },
+        { "path": "order-service/src/main/java/com/example/order_service/service/OrderService.java", "line": 46, "end_line": 58, "label": "se guarda en PENDING" }
+      ]
+    },
+    {
+      "id": "confirmed",
+      "type": "success",
+      "label": "CONFIRMED",
+      "sublabel": "stock descontado en inventory_db",
+      "tag": "activo",
+      "step": "02",
+      "sources": [
+        { "path": "order-service/src/main/java/com/example/order_service/service/OrderService.java", "line": 65, "end_line": 74, "label": "transición a CONFIRMED" },
+        { "path": "order-service/src/main/java/com/example/order_service/entity/OrderStatus.java", "line": 24, "end_line": 24, "label": "PENDING → CONFIRMED" }
+      ]
+    },
+    {
+      "id": "cancelled",
+      "type": "neutral",
+      "label": "CANCELLED",
+      "sublabel": "estado terminal, sin salidas",
+      "tag": "terminal",
+      "step": "03",
+      "sources": [
+        { "path": "order-service/src/main/java/com/example/order_service/service/OrderService.java", "line": 100, "end_line": 115, "label": "cancelOrder" },
+        { "path": "order-service/src/main/java/com/example/order_service/entity/OrderStatus.java", "line": 20, "end_line": 27, "label": "transiciones válidas" }
+      ]
+    }
+  ],
+  "transitions": [
+    {
+      "id": "pending-confirmed",
+      "from": "pending",
+      "to": "confirmed",
+      "label": "stock validado y descontado",
+      "variant": "emphasis"
+    },
+    {
+      "id": "confirmed-cancelled",
+      "from": "confirmed",
+      "to": "cancelled",
+      "label": "POST /{orderId}/cancel"
+    },
+    {
+      "id": "pending-cancelled",
+      "from": "pending",
+      "to": "cancelled",
+      "label": "POST /{orderId}/cancel"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "rose",
+      "title": "Stock insuficiente",
+      "items": [
+        "La creación responde 409 con code STOCK_INSUFFICIENT",
+        "No existe un estado STOCK_INSUFFICIENT: el pedido se queda en PENDING",
+        "No hay rollback ni borrado; el pedido se puede reintentar o cancelar"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Transiciones inválidas",
+      "items": [
+        "CANCELLED es terminal: cualquier salida responde 409 INVALID_TRANSITION",
+        "No hay transiciones hacia PENDING: el estado inicial se fija al crear el pedido",
+        "canTransitionTo es la única fuente de verdad de las transiciones válidas"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Historial",
+      "items": [
+        "Cada transición inserta una fila en order_history con from_status, to_status y trace_id",
+        "La creación registra null → PENDING y, si hay stock, PENDING → CONFIRMED",
+        "La cancelación registra el estado previo → CANCELLED"
+      ]
+    }
+  ]
+}

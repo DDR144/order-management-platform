@@ -1,0 +1,170 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Crear pedido: POST /api/v1/orders",
+    "output": "docs/diagrams/create-order.sequence.html",
+    "locale": "es",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/DDR144/order-management-platform.git",
+      "provider": "github",
+      "link_mode": "web",
+      "revision": "c8e3215facdd0e4f0c3ac69919988d5ba83b301a"
+    }
+  },
+  "participants": [
+    { "id": "client", "type": "external", "label": "Cliente", "sublabel": "consumidor de la API" },
+    {
+      "id": "gateway",
+      "type": "backend",
+      "label": "API Gateway",
+      "sublabel": "Spring Cloud Gateway :8080",
+      "sources": [
+        { "path": "api-gateway/src/main/java/com/example/api_gateway/filter/TraceIdGlobalFilter.java", "line": 34, "end_line": 53, "label": "traza" },
+        { "path": "api-gateway/src/main/java/com/example/api_gateway/config/SecurityConfig.java", "line": 37, "end_line": 41, "label": "JWT obligatorio" },
+        { "path": "api-gateway/src/main/resources/application.yml", "line": 8, "end_line": 18, "label": "ruta a order-service" }
+      ]
+    },
+    {
+      "id": "orders",
+      "type": "backend",
+      "label": "Order Service",
+      "sublabel": "Spring WebFlux :8081",
+      "sources": [
+        { "path": "order-service/src/main/java/com/example/order_service/controller/OrderController.java", "line": 36, "end_line": 45, "label": "endpoint 201" },
+        { "path": "order-service/src/main/java/com/example/order_service/service/OrderService.java", "line": 46, "end_line": 80, "label": "createOrder" },
+        { "path": "order-service/src/main/java/com/example/order_service/client/InventoryClient.java", "line": 31, "end_line": 40, "label": "llamada a inventory" }
+      ]
+    },
+    {
+      "id": "orderdb",
+      "type": "database",
+      "label": "order_db",
+      "sublabel": "PostgreSQL 16",
+      "sources": [{ "path": "docker-compose.yml", "line": 3, "end_line": 19 }]
+    },
+    {
+      "id": "inventory",
+      "type": "backend",
+      "label": "Inventory Service",
+      "sublabel": "Spring WebFlux :8082",
+      "sources": [
+        { "path": "inventory-service/src/main/java/com/example/inventory_service/controller/InventoryController.java", "line": 51, "end_line": 72, "label": "validar y descontar" },
+        { "path": "inventory-service/src/main/java/com/example/inventory_service/repository/ProductRepository.java", "line": 24, "end_line": 25, "label": "UPDATE condicional" }
+      ]
+    },
+    {
+      "id": "inventorydb",
+      "type": "database",
+      "label": "inventory_db",
+      "sublabel": "PostgreSQL 16",
+      "sources": [{ "path": "docker-compose.yml", "line": 21, "end_line": 37 }]
+    }
+  ],
+  "segments": [
+    { "from": 150, "to": 660, "label": "Camino feliz: hay stock" },
+    { "from": 680, "to": 900, "label": "Rama alterna: stock insuficiente" }
+  ],
+  "messages": [
+    {
+      "id": "create-order",
+      "from": "client",
+      "to": "gateway",
+      "y": 170,
+      "label": "POST /api/v1/orders",
+      "variant": "emphasis",
+      "note": "Authorization: Bearer <JWT>; X-Trace-Id opcional"
+    },
+    {
+      "id": "route-orders",
+      "from": "gateway",
+      "to": "orders",
+      "y": 230,
+      "label": "/api/v1/orders/**",
+      "variant": "emphasis",
+      "note": "JWT validado en el gateway; traza reutilizada o UUID v4"
+    },
+    { "id": "insert-pending", "from": "orders", "to": "orderdb", "y": 290, "label": "INSERT order (PENDING)" },
+    { "id": "insert-history-1", "from": "orders", "to": "orderdb", "y": 350, "label": "INSERT order_history (→ PENDING)" },
+    {
+      "id": "validate-stock",
+      "from": "orders",
+      "to": "inventory",
+      "y": 410,
+      "label": "POST /api/v1/products/validate",
+      "variant": "emphasis",
+      "note": "reenvía el JWT y el X-Trace-Id"
+    },
+    { "id": "deduct-stock", "from": "inventory", "to": "inventorydb", "y": 470, "label": "UPDATE stock = stock - :cantidad" },
+    { "id": "rows-affected", "from": "inventorydb", "to": "inventory", "y": 500, "label": "filas afectadas", "variant": "return" },
+    { "id": "stock-confirmed", "from": "inventory", "to": "orders", "y": 528, "label": "CONFIRMED", "variant": "return" },
+    { "id": "update-confirmed", "from": "orders", "to": "orderdb", "y": 556, "label": "UPDATE order (CONFIRMED)" },
+    { "id": "insert-history-2", "from": "orders", "to": "orderdb", "y": 584, "label": "INSERT order_history (PENDING → CONFIRMED)" },
+    { "id": "created", "from": "orders", "to": "gateway", "y": 612, "label": "201 Created (Order)", "variant": "return" },
+    { "id": "created-client", "from": "gateway", "to": "client", "y": 640, "label": "201 + X-Trace-Id", "variant": "return" },
+    {
+      "id": "validate-stock-alt",
+      "from": "orders",
+      "to": "inventory",
+      "y": 700,
+      "label": "POST /api/v1/products/validate",
+      "variant": "dashed",
+      "note": "stock disponible < cantidad pedida"
+    },
+    { "id": "deduct-stock-alt", "from": "inventory", "to": "inventorydb", "y": 760, "label": "UPDATE stock = stock - :cantidad" },
+    { "id": "rows-zero", "from": "inventorydb", "to": "inventory", "y": 788, "label": "0 filas", "variant": "return" },
+    { "id": "stock-insufficient", "from": "inventory", "to": "orders", "y": 816, "label": "STOCK_INSUFFICIENT", "variant": "return" },
+    { "id": "conflict", "from": "orders", "to": "gateway", "y": 844, "label": "409 STOCK_INSUFFICIENT", "variant": "return" },
+    {
+      "id": "conflict-client",
+      "from": "gateway",
+      "to": "client",
+      "y": 872,
+      "label": "409 + X-Trace-Id",
+      "variant": "return",
+      "note": "el pedido queda en PENDING; no hay rollback"
+    }
+  ],
+  "activations": [
+    { "participant": "gateway", "from": 165, "to": 645, "type": "backend" },
+    { "participant": "orders", "from": 225, "to": 617, "type": "backend" },
+    { "participant": "orderdb", "from": 285, "to": 355, "type": "database" },
+    { "participant": "inventory", "from": 405, "to": 533, "type": "backend" },
+    { "participant": "inventorydb", "from": 465, "to": 505, "type": "database" },
+    { "participant": "orders", "from": 695, "to": 849, "type": "backend" },
+    { "participant": "inventory", "from": 695, "to": 821, "type": "backend" },
+    { "participant": "inventorydb", "from": 755, "to": 793, "type": "database" }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Camino feliz",
+      "items": [
+        "El pedido nace en PENDING con su primera fila de historial",
+        "Inventory Service descuenta stock con un UPDATE atómico y condicional",
+        "Con la respuesta CONFIRMED, Order Service actualiza a CONFIRMED y registra la transición",
+        "La respuesta es 201 Created con el pedido completo"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Stock insuficiente",
+      "items": [
+        "El UPDATE no afecta filas y la respuesta es STOCK_INSUFFICIENT",
+        "Order Service lanza StockInsufficientException y el handler global devuelve 409",
+        "El pedido queda en PENDING con solo la fila de historial inicial: no hay rollback",
+        "El cuerpo del error incluye code, message y traceId"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Trazabilidad",
+      "items": [
+        "El gateway reutiliza el X-Trace-Id entrante o genera un UUID v4",
+        "La cabecera viaja en la llamada interna a Inventory Service",
+        "Vuelve en la respuesta y se registra en el MDC de cada servicio"
+      ]
+    }
+  ]
+}

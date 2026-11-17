@@ -131,6 +131,7 @@ Códigos: `UNAUTHORIZED`, `STOCK_INSUFFICIENT`, `INVALID_TRANSITION`,
 
 - OpenAPI generado (Swagger UI) en cada microservicio y spec estático en `docs/openapi.yaml`.
 - Colección Postman en `postman/OMP.postman_collection.json`.
+- Diagramas interactivos del sistema en `docs/diagrams/README.md`.
 
 ### Pruebas unitarias (JUnit 5 + Mockito + StepVerifier)
 

@@ -1,0 +1,195 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "OMP: arquitectura de runtime",
+    "output": "docs/diagrams/architecture.html",
+    "locale": "es",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/DDR144/order-management-platform.git",
+      "provider": "github",
+      "link_mode": "web",
+      "revision": "c8e3215facdd0e4f0c3ac69919988d5ba83b301a"
+    }
+  },
+  "components": [
+    {
+      "id": "client",
+      "type": "external",
+      "label": "Cliente",
+      "sublabel": "navegador o consumidor de API",
+      "pos": [40, 220],
+      "size": [130, 64]
+    },
+    {
+      "id": "keycloak",
+      "type": "security",
+      "label": "Keycloak",
+      "sublabel": "realm reto-backend :8083",
+      "tag": "OAuth 2.0 / OIDC",
+      "pos": [300, 40],
+      "size": [170, 64],
+      "sources": [
+        { "path": "docker-compose.yml", "line": 39, "end_line": 57 },
+        { "path": "keycloak/realm-import/reto-backend-realm.json", "line": 2, "end_line": 2, "label": "realm importado" }
+      ]
+    },
+    {
+      "id": "gateway",
+      "type": "backend",
+      "label": "API Gateway",
+      "sublabel": "Spring Cloud Gateway :8080",
+      "tag": "valida JWT y propaga traza",
+      "pos": [300, 220],
+      "size": [170, 64],
+      "sources": [
+        { "path": "api-gateway/src/main/resources/application.yml", "line": 8, "end_line": 18, "label": "rutas" },
+        { "path": "api-gateway/src/main/java/com/example/api_gateway/config/SecurityConfig.java", "line": 37, "end_line": 41, "label": "toda ruta exige JWT" },
+        { "path": "api-gateway/src/main/java/com/example/api_gateway/filter/TraceIdGlobalFilter.java", "line": 34, "end_line": 53, "label": "X-Trace-Id" }
+      ]
+    },
+    {
+      "id": "orders",
+      "type": "backend",
+      "label": "Order Service",
+      "sublabel": "Spring WebFlux :8081",
+      "tag": "resource server JWT",
+      "pos": [600, 220],
+      "size": [180, 64],
+      "sources": [
+        { "path": "order-service/src/main/java/com/example/order_service/controller/OrderController.java", "line": 24, "end_line": 38, "label": "POST /api/v1/orders" },
+        { "path": "order-service/src/main/java/com/example/order_service/service/OrderService.java", "line": 46, "end_line": 80, "label": "flujo de creación" },
+        { "path": "order-service/src/main/resources/application.yml", "line": 4, "end_line": 5, "label": "R2DBC order_db" }
+      ]
+    },
+    {
+      "id": "orderdb",
+      "type": "database",
+      "label": "order_db",
+      "sublabel": "PostgreSQL 16 :5434",
+      "pos": [900, 220],
+      "size": [150, 64],
+      "sources": [
+        { "path": "docker-compose.yml", "line": 3, "end_line": 19 }
+      ]
+    },
+    {
+      "id": "inventory",
+      "type": "backend",
+      "label": "Inventory Service",
+      "sublabel": "Spring WebFlux :8082",
+      "tag": "resource server JWT",
+      "pos": [600, 380],
+      "size": [180, 64],
+      "sources": [
+        { "path": "inventory-service/src/main/java/com/example/inventory_service/controller/InventoryController.java", "line": 23, "end_line": 52, "label": "validación de stock" },
+        { "path": "inventory-service/src/main/java/com/example/inventory_service/repository/ProductRepository.java", "line": 24, "end_line": 25, "label": "UPDATE atómico" },
+        { "path": "inventory-service/src/main/resources/application.yml", "line": 4, "end_line": 5, "label": "R2DBC inventory_db" }
+      ]
+    },
+    {
+      "id": "inventorydb",
+      "type": "database",
+      "label": "inventory_db",
+      "sublabel": "PostgreSQL 16 :5433",
+      "pos": [900, 380],
+      "size": [150, 64],
+      "sources": [
+        { "path": "docker-compose.yml", "line": 21, "end_line": 37 }
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Red interna de docker-compose",
+      "wraps": ["keycloak", "gateway", "orders", "orderdb", "inventory", "inventorydb"]
+    }
+  ],
+  "connections": [
+    {
+      "id": "client-gateway",
+      "from": "client",
+      "to": "gateway",
+      "label": "HTTPS + Bearer JWT",
+      "variant": "emphasis",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "keycloak-gateway",
+      "from": "keycloak",
+      "to": "gateway",
+      "label": "JWKS / issuer",
+      "variant": "security",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "gateway-orders",
+      "from": "gateway",
+      "to": "orders",
+      "label": "/api/v1/orders",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "gateway-inventory",
+      "from": "gateway",
+      "to": "inventory",
+      "label": "/api/v1/products"
+    },
+    {
+      "id": "orders-inventory",
+      "from": "orders",
+      "to": "inventory",
+      "label": "POST /products/validate"
+    },
+    {
+      "id": "orders-db",
+      "from": "orders",
+      "to": "orderdb",
+      "label": "R2DBC",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "inventory-db",
+      "from": "inventory",
+      "to": "inventorydb",
+      "label": "R2DBC",
+      "fromSide": "right",
+      "toSide": "left"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Trazabilidad",
+      "items": [
+        "El gateway reutiliza el X-Trace-Id entrante o genera un UUID v4",
+        "Lo propaga a Order e Inventory Service y viaja en la llamada interna",
+        "Vuelve en la respuesta y queda en el MDC de cada servicio"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Seguridad",
+      "items": [
+        "El gateway exige JWT en toda ruta salvo actuator health e info",
+        "Order e Inventory Service validan el mismo JWT como resource servers",
+        "Keycloak emite los tokens del realm reto-backend"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Datos",
+      "items": [
+        "Cada servicio escribe solo su propia base: order_db e inventory_db",
+        "El stock se descuenta con un UPDATE atómico y condicional",
+        "El cliente queda fuera de la red interna de docker-compose"
+      ]
+    }
+  ]
+}
